@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prompt Gallery | Inspire-se</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .masonry {
+            column-count: 2;
+            column-gap: 1rem;
+        }
+        @media (min-width: 768px) { .masonry { column-count: 3; } }
+        @media (min-width: 1024px) { .masonry { column-count: 4; } }
+        .masonry-item {
+            break-inside: avoid;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans">
+
+    <header class="p-6 border-b border-slate-800 flex flex-col md:flex-row justify-between items-center sticky top-0 bg-slate-900/80 backdrop-blur-md z-50 gap-4">
+        <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">
+            AI Prompt Gallery 🐈
+        </h1>
+        <nav class="flex flex-wrap justify-center gap-2">
+            <button onclick="setSort('id')" id="sortIdBtn" class="px-4 py-2 rounded-full bg-purple-600 text-white transition text-sm font-medium">
+                Recentes
+            </button>
+            <button onclick="setSort('copies')" id="sortCopiesBtn" class="px-4 py-2 rounded-full bg-slate-800 hover:bg-slate-700 transition text-sm font-medium">
+                🔥 Mais Copiados
+            </button>
+            <button onclick="filterFavorites()" id="favBtn" class="px-4 py-2 rounded-full bg-slate-800 hover:bg-slate-700 transition text-sm font-medium">
+                ❤️ Favoritos
+            </button>
+        </nav>
+        <div id="periodFilters" class="flex gap-2 hidden">
+            <button onclick="setPeriod('day')" id="periodDayBtn" class="px-3 py-1 rounded-full bg-purple-600 text-white text-xs transition">
+                Hoje
+            </button>
+            <button onclick="setPeriod('week')" id="periodWeekBtn" class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600 text-white text-xs transition">
+                Semana
+            </button>
+            <button onclick="setPeriod('month')" id="periodMonthBtn" class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600 text-white text-xs transition">
+                Mês
+            </button>
+            <button onclick="setPeriod('all')" id="periodAllBtn" class="px-3 py-1 rounded-full bg-slate-700 hover:bg-slate-600 text-white text-xs transition">
+                Sempre
+            </button>
+        </div>
+    </header>
+
+    <main class="p-6">
+        <div class="mb-8 text-center">
+            <h2 class="text-4xl font-extrabold mb-2">Descubra Prompts Incríveis</h2>
+            <p class="text-slate-400">Copie a "receita" e recrie a arte na sua IA favorita.</p>
+        </div>
+
+        <div id="gallery" class="masonry"></div>
+    </main>
+
+    <!-- Modal/Lightbox para imagens -->
+    <div id="imageModal" class="fixed inset-0 bg-black/90 z-[100] hidden flex items-center justify-center p-4" onclick="closeModal()">
+        <div class="relative max-w-7xl max-h-[90vh] w-full flex flex-col items-center" onclick="event.stopPropagation()">
+            <button onclick="closeModal()" class="absolute -top-12 right-0 text-white/80 hover:text-white text-4xl transition z-10">
+                &times;
+            </button>
+            <img id="modalImage" src="" alt="" class="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl">
+            <div id="modalCaption" class="mt-4 text-center text-white/90 max-w-2xl"></div>
+            <div class="mt-4 flex gap-3">
+                <button id="modalCopyBtn" onclick="copyModalPrompt()" class="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copiar Prompt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allPrompts = [];
+        let favorites = JSON.parse(localStorage.getItem('fav_prompts') || '[]');
+        let currentSort = 'id';
+        let currentPeriod = 'all';
+        let showingFavorites = false;
+
+        async function fetchPrompts() {
+            try {
+                let url;
+                if (currentSort === 'copies') {
+                    // Usa o endpoint de trending com período
+                    url = `/api/prompts/trending?period=${currentPeriod}`;
+                } else {
+                    url = `/api/prompts?sort=${currentSort}`;
+                }
+                const response = await fetch(url);
+                allPrompts = await response.json();
+                renderGallery();
+            } catch (err) {
+                document.getElementById('gallery').innerHTML = '<p class="text-center col-span-full text-red-400">Erro ao conectar com o servidor!</p>';
+            }
+        }
+
+        function renderGallery() {
+            const gallery = document.getElementById('gallery');
+            const data = showingFavorites ? allPrompts.filter(p => favorites.includes(p.id)) : allPrompts;
+            
+            if (data.length === 0) {
+                gallery.innerHTML = '<p class="text-center col-span-full text-slate-500">Nenhum prompt encontrado aqui.</p>';
+                return;
+            }
+
+            gallery.innerHTML = data.map(p => `
+                <div class="masonry-item group relative overflow-hidden rounded-2xl bg-slate-800 border border-slate-700 hover:border-purple-500 transition-all duration-300 shadow-xl">
+                    <div class="cursor-zoom-in overflow-hidden" onclick="openModal('${p.image_url}', '${p.title.replace(/'/g, "\\'")}', '${p.prompt.replace(/'/g, "\\'")}', '${p.model}', ${p.id})">
+                        <img src="${p.image_url}" alt="${p.title}" class="w-full h-auto opacity-90 group-hover:opacity-100 transition-opacity hover:scale-105 duration-500" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000&auto=format&fit=crop';this.onerror=null;">
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-purple-400">${p.model}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-500" title="Cópias totais">📋 ${p.copy_count}</span>
+                                ${p.period_copies > 0 ? `<span class="text-xs text-orange-400 font-bold" title="Cópias no período">🔥 ${p.period_copies}</span>` : ''}
+                                <button onclick="toggleFavorite(${p.id})" class="text-xl ${favorites.includes(p.id) ? 'text-red-500' : 'text-slate-600'} hover:scale-125 transition">
+                                    ${favorites.includes(p.id) ? '❤️' : '🤍'}
+                                </button>
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-semibold mb-3">${p.title}</h3>
+                        <div class="relative group/prompt">
+                            <div class="p-3 bg-slate-900 rounded-lg text-sm text-slate-400 italic border border-slate-700 line-clamp-3 overflow-hidden">
+                                "${p.prompt}"
+                            </div>
+                            <button 
+                                onclick="copyPrompt(${p.id}, '${p.prompt.replace(/'/g, "\\'")}', this)"
+                                class="absolute top-2 right-2 p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-md shadow-lg transition-all transform hover:scale-110 active:scale-95"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function copyPrompt(id, text, btn) {
+            await navigator.clipboard.writeText(text);
+            
+            // Increment copy count in DB
+            fetch(`/api/copy/${id}`, { method: 'POST' });
+
+            const originalInner = btn.innerHTML;
+            btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>';
+            btn.classList.replace('bg-purple-600', 'bg-green-500');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalInner;
+                btn.classList.replace('bg-green-500', 'bg-purple-600');
+                fetchPrompts(); // Refresh counts
+            }, 2000);
+        }
+
+        function toggleFavorite(id) {
+            if (favorites.includes(id)) {
+                favorites = favorites.filter(fid => fid !== id);
+            } else {
+                favorites.push(id);
+            }
+            localStorage.setItem('fav_prompts', JSON.stringify(favorites));
+            renderGallery();
+        }
+
+        function setSort(sort) {
+            currentSort = sort;
+            
+            // Atualiza botões
+            document.getElementById('sortIdBtn').classList.toggle('bg-purple-600', sort === 'id');
+            document.getElementById('sortIdBtn').classList.toggle('bg-slate-800', sort !== 'id');
+            document.getElementById('sortCopiesBtn').classList.toggle('bg-purple-600', sort === 'copies');
+            document.getElementById('sortCopiesBtn').classList.toggle('bg-slate-800', sort !== 'copies');
+            
+            // Mostra/esconde filtros de período
+            const periodFilters = document.getElementById('periodFilters');
+            if (sort === 'copies') {
+                periodFilters.classList.remove('hidden');
+            } else {
+                periodFilters.classList.add('hidden');
+            }
+            
+            fetchPrompts();
+        }
+
+        function setPeriod(period) {
+            currentPeriod = period;
+            
+            // Atualiza estilos dos botões de período
+            ['day', 'week', 'month', 'all'].forEach(p => {
+                const btn = document.getElementById(`period${p.charAt(0).toUpperCase() + p.slice(1)}Btn`);
+                if (p === period) {
+                    btn.classList.remove('bg-slate-700', 'hover:bg-slate-600');
+                    btn.classList.add('bg-purple-600');
+                } else {
+                    btn.classList.remove('bg-purple-600');
+                    btn.classList.add('bg-slate-700', 'hover:bg-slate-600');
+                }
+            });
+            
+            fetchPrompts();
+        }
+
+        function filterFavorites() {
+            showingFavorites = !showingFavorites;
+            document.getElementById('favBtn').classList.toggle('bg-purple-600');
+            document.getElementById('favBtn').classList.toggle('bg-slate-800');
+            renderGallery();
+        }
+
+        // Modal/Lightbox functions
+        let currentModalPromptId = null;
+        let currentModalPromptText = '';
+
+        function openModal(imageUrl, title, prompt, model, id) {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            const modalCaption = document.getElementById('modalCaption');
+            
+            currentModalPromptId = id;
+            currentModalPromptText = prompt;
+            
+            modalImage.src = imageUrl;
+            modalCaption.innerHTML = `
+                <h3 class="text-xl font-bold text-purple-400 mb-2">${title}</h3>
+                <p class="text-sm text-slate-300 italic mb-2">"${prompt}"</p>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">${model}</span>
+            `;
+            
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+            currentModalPromptId = null;
+            currentModalPromptText = '';
+        }
+
+        async function copyModalPrompt() {
+            if (!currentModalPromptText) return;
+            
+            await navigator.clipboard.writeText(currentModalPromptText);
+            
+            // Registra a cópia no backend
+            if (currentModalPromptId) {
+                fetch(`/api/copy/${currentModalPromptId}`, { method: 'POST' });
+            }
+            
+            const btn = document.getElementById('modalCopyBtn');
+            const originalHTML = btn.innerHTML;
+            
+            btn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Copiado!
+            `;
+            btn.classList.replace('bg-purple-600', 'bg-green-500');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.replace('bg-green-500', 'bg-purple-600');
+                fetchPrompts(); // Atualiza contadores
+            }, 2000);
+        }
+
+        // Fecha modal com ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        fetchPrompts();
+    </script>
+</body>
+</html>

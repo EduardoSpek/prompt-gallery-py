@@ -53,9 +53,10 @@ def get_prompts():
     sort_by = request.args.get('sort', 'id')
     return prompt_controller.get_all_prompts(sort_by)
 
-@app.route('/api/prompts/trending/<period>', methods=['GET'])
-def get_trending(period):
+@app.route('/api/prompts/trending', methods=['GET'])
+def get_trending():
     """Busca prompts em tendência (day, week, month, all)"""
+    period = request.args.get('period', 'all')
     return prompt_controller.get_trending(period)
 
 @app.route('/api/prompts/<int:prompt_id>', methods=['GET'])

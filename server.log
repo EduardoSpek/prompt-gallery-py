@@ -5,16 +5,35 @@
  * Running on http://127.0.0.1:8080
  * Running on http://192.168.100.39:8080
 [33mPress CTRL+C to quit[0m
-127.0.0.1 - - [05/Apr/2026 05:30:54] "GET /api/prompts/trending?period=all HTTP/1.1" 200 -
-127.0.0.1 - - [05/Apr/2026 05:30:56] "GET /api/prompts/trending?period=all HTTP/1.1" 200 -
-127.0.0.1 - - [05/Apr/2026 05:30:59] "GET /api/prompts/trending?period=all HTTP/1.1" 200 -
-127.0.0.1 - - [05/Apr/2026 05:31:02] "GET /api/prompts/trending?period=all HTTP/1.1" 200 -
-127.0.0.1 - - [05/Apr/2026 05:31:06] "GET /api/prompts/trending?period=week HTTP/1.1" 200 -
-127.0.0.1 - - [05/Apr/2026 05:31:07] "GET /api/prompts/trending?period=month HTTP/1.1" 200 -
-127.0.0.1 - - [05/Apr/2026 05:31:07] "GET /api/prompts/trending?period=all HTTP/1.1" 200 -
-127.0.0.1 - - [05/Apr/2026 05:31:08] "GET /api/prompts/trending?period=day HTTP/1.1" 200 -
-127.0.0.1 - - [05/Apr/2026 05:31:13] "POST /api/copy/5 HTTP/1.1" 200 -
-127.0.0.1 - - [05/Apr/2026 05:31:14] "GET /api/prompts/trending?period=day HTTP/1.1" 200 -
-127.0.0.1 - - [05/Apr/2026 05:31:26] "POST /api/copy/5 HTTP/1.1" 200 -
-127.0.0.1 - - [05/Apr/2026 05:31:28] "GET /api/prompts/trending?period=day HTTP/1.1" 200 -
-127.0.0.1 - - [05/Apr/2026 05:31:56] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+192.168.100.39 - - [06/Apr/2026 03:50:06] "[36mGET / HTTP/1.1[0m" 304 -
+192.168.100.39 - - [06/Apr/2026 03:50:06] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+[2026-04-06 03:50:06,547] ERROR in app: Exception on /api/prompts [GET]
+Traceback (most recent call last):
+  File "/root/nano_env/lib/python3.13/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/root/nano_env/lib/python3.13/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/root/nano_env/lib/python3.13/site-packages/flask_cors/extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ~^^^^^^^^^^^^^^^^^
+  File "/root/nano_env/lib/python3.13/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/root/nano_env/lib/python3.13/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/root/.nanobot/workspace/prompt-gallery-py/app.py", line 54, in get_prompts
+    return prompt_controller.get_all_prompts(sort_by)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/root/.nanobot/workspace/prompt-gallery-py/interface/controllers.py", line 22, in get_all_prompts
+    prompts = self.use_cases.list_prompts(sort_by)
+  File "/root/.nanobot/workspace/prompt-gallery-py/application/use_cases.py", line 37, in list_prompts
+    return self.prompt_repo.get_all(sort_by)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/root/.nanobot/workspace/prompt-gallery-py/infrastructure/sqlite_repositories.py", line 80, in get_all
+    return [self._row_to_prompt(row) for row in rows]
+            ~~~~~~~~~~~~~~~~~~~^^^^^
+  File "/root/.nanobot/workspace/prompt-gallery-py/infrastructure/sqlite_repositories.py", line 51, in _row_to_prompt
+    created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None
+                                                            ~~~^^^^^^^^^^^^^^
+IndexError: No item with that key
+192.168.100.39 - - [06/Apr/2026 03:50:06] "[35m[1mGET /api/prompts?sort=id HTTP/1.1[0m" 500 -
